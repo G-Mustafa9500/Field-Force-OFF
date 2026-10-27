@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet map */
+@import "leaflet/dist/leaflet.css";
+
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* Fix Leaflet z-index in modals */
+.leaflet-container { z-index: 0; }
+.leaflet-pane      { z-index: 0; }
+.leaflet-top,
+.leaflet-bottom    { z-index: 10; }
