@@ -1,0 +1,52 @@
+name: Deploy (Vercel)
+
+# Manual or tag-triggered deployment. CI must be green first.
+# Required repository secrets:
+#   VERCEL_TOKEN
+#   VERCEL_ORG_ID
+#   VERCEL_PROJECT_ID_BACKEND
+#   VERCEL_PROJECT_ID_FRONTEND
+# If VERCEL_TOKEN is not configured the job exits successfully without
+# deploying, so forks/branches do not fail.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  deploy:
+    name: Deploy backend + frontend
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID_BACKEND: ${{ secrets.VERCEL_PROJECT_ID_BACKEND }}
+      VERCEL_PROJECT_ID_FRONTEND: ${{ secrets.VERCEL_PROJECT_ID_FRONTEND }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Skip when no token is configured
+        if: env.VERCEL_TOKEN == ''
+        run: echo "::notice::VERCEL_TOKEN is not set — skipping deployment."
+
+      - name: Deploy backend
+        if: env.VERCEL_TOKEN != ''
+        working-directory: backend
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_BACKEND }}
+        run: npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
+
+      - name: Deploy frontend
+        if: env.VERCEL_TOKEN != ''
+        working-directory: frontend
+        env:
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_FRONTEND }}
+        run: npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
