@@ -32,7 +32,10 @@ import {
 import { queueAction, getPending, getPendingCount } from "../../utils/offlineQueue";
 import { syncPendingActions } from "../../utils/syncManager";
 import { fmtTime, distKm } from "../../utils/date";
-import { Card, Button, Toast, Loading, Badge, Confirm } from "../../ui/kit";
+import {
+  Card, Button, Toast, Loading, Badge, Confirm,
+  SafeScreen, RefreshableScroll, ListItem, Avatar, Chip
+} from "../../ui/kit";
 import { C, RADIUS, SPACING as S } from "../../ui/theme";
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -455,11 +458,11 @@ export default function EmployeeHomeScreen() {
   const routeShops   = Array.isArray(myRoute?.shops) ? myRoute.shops : [];
   const shopDone = (shopId) => todayCheckIns.find(c => idMatch(c.shop?._id || c.shop, shopId));
 
-  if (loading) return <Loading text="Data load ho raha hai..." />;
+  if (loading) return <Loading text="Data load ho raha hai..." fullScreen />;
 
   return (
-    <View style={st.root}>
-      <Toast msg={toast.msg} type={toast.type} />
+    <SafeScreen style={st.root}>
+      <Toast msg={toast.msg} type={toast.type} onDismiss={() => setToast({ msg: "", type: "success" })} />
 
       {/* Action Loading overlay */}
       {actionMsg ? (
@@ -471,7 +474,7 @@ export default function EmployeeHomeScreen() {
         </View>
       ) : null}
 
-      <ScrollView contentContainerStyle={st.scroll}>
+      <RefreshableScroll refreshing={false} onRefresh={loadAll} style={st.scroll}>
 
         {/* Offline Banner */}
         {!isOnline && (
@@ -523,32 +526,28 @@ export default function EmployeeHomeScreen() {
         <Card>
           <Text style={st.cardTitle}>📸 Attendance</Text>
           <View style={st.attRow}>
-            <TouchableOpacity
+            <Button
+              title={isCheckedIn ? "✅ Check-In" : "📸 Check In"}
               onPress={() => !isCheckedIn && handleCapture("checkin")}
               disabled={isCheckedIn}
-              style={[st.attBtn, isCheckedIn ? st.attDone : st.attCheckin]}>
-              {isCheckedIn
-                ? (<>
-                    <Text style={[st.attBtnTitle, st.attBtnTitleDone]}>✅ Check-In</Text>
-                    <Text style={[st.attBtnSub, { color: C.green }]}>
-                      {fmtTime(attendance.checkInTime)}{attendance?.offline ? " ⏳" : ""}
-                    </Text>
-                  </>)
-                : <Text style={st.attBtnTitle}>📸 Check In</Text>}
-            </TouchableOpacity>
-            <TouchableOpacity
+              color={isCheckedIn ? C.green : undefined}
+              fullWidth
+              style={st.attBtn}
+            />
+            {isCheckedIn && (
+              <Text style={[st.attBtnSub, { color: C.green }]}>{fmtTime(attendance.checkInTime)}{attendance?.offline ? " ⏳" : ""}</Text>
+            )}
+            <Button
+              title={isCheckedOut ? "🔴 Check-Out" : "📸 Check Out"}
               onPress={() => isCheckedIn && !isCheckedOut && setConfirmOut(true)}
               disabled={!isCheckedIn || isCheckedOut}
-              style={[st.attBtn, isCheckedOut ? st.attDone : (isCheckedIn ? st.attCheckout : st.attDisabled)]}>
-              {isCheckedOut
-                ? (<>
-                    <Text style={[st.attBtnTitle, { color: C.red }]}>🔴 Check-Out</Text>
-                    <Text style={[st.attBtnSub, { color: C.red }]}>
-                      {fmtTime(attendance.checkOutTime)}
-                    </Text>
-                  </>)
-                : <Text style={st.attBtnTitle}>📸 Check Out</Text>}
-            </TouchableOpacity>
+              color={isCheckedOut ? C.red : (isCheckedIn ? C.red : C.gray)}
+              fullWidth
+              style={st.attBtn}
+            />
+            {isCheckedOut && (
+              <Text style={[st.attBtnSub, { color: C.red }]}>{fmtTime(attendance.checkOutTime)}</Text>
+            )}
           </View>
         </Card>
 
@@ -634,7 +633,7 @@ export default function EmployeeHomeScreen() {
                       )}
                     </View>
                     {!done && isCheckedIn && !isCheckedOut && dayStarted && (
-                      <Button title="📸 In" small onPress={() => handleCapture("shop", shop)} />
+                      <Button title="📸 In" small onPress={() => handleCapture("shop", shop)} style={{ marginLeft: S.sm }} />
                     )}
                   </View>
                 </View>
@@ -677,17 +676,15 @@ export default function EmployeeHomeScreen() {
         )}
 
         {/* Logout */}
-        <TouchableOpacity onPress={actionLogout} style={st.logoutBtn}>
-          <Text style={st.logoutText}>🚪 Logout</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        <Button title="🚪 Logout" color={C.red} outline onPress={actionLogout} style={st.logoutBtn} />
+      </RefreshableScroll>
 
       {/* Check-out confirm */}
       <Confirm visible={confirmOut} title="Check-Out?"
         message="Photo + location ke saath check-out hogi. Day khatam ho jayega."
         onYes={() => { setConfirmOut(false); handleCapture("checkout"); }}
         onNo={() => setConfirmOut(false)} />
-    </View>
+    </SafeScreen>
   );
 }
 
